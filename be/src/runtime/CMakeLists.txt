@@ -75,3 +75,7 @@ ADD_BE_TEST(thread-resource-mgr-test)
 ADD_BE_TEST(mem-tracker-test)
 ADD_BE_TEST(multi-precision-test)
 ADD_BE_TEST(decimal-test)
+
+add_executable(plan-fragment-executor-test plan-fragment-executor-test.cc)
+target_link_libraries(plan-fragment-executor-test ${IMPALA_TEST_LINK_LIBS})
+set_target_properties(plan-fragment-executor-test PROPERTIES COMPILE_FLAGS "-std=c++0x")
