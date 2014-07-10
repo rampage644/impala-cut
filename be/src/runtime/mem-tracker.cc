@@ -115,10 +115,11 @@ void MemTracker::AddChildTracker(MemTracker* tracker) {
 }
 
 void MemTracker::UnregisterFromParent() {
-  DCHECK(parent_ != NULL);
-  lock_guard<mutex> l(parent_->child_trackers_lock_);
-  parent_->child_trackers_.erase(child_tracker_it_);
-  child_tracker_it_ = parent_->child_trackers_.end();
+  if (parent_ != NULL) {
+    lock_guard<mutex> l(parent_->child_trackers_lock_);
+    parent_->child_trackers_.erase(child_tracker_it_);
+    child_tracker_it_ = parent_->child_trackers_.end();
+  }
 }
 
 MemTracker* MemTracker::GetRequestPoolMemTracker(const string& pool_name,

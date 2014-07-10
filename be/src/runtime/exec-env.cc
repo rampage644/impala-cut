@@ -135,7 +135,7 @@ ExecEnv::ExecEnv()
     hdfs_op_thread_pool_(
         CreateHdfsOpThreadPool("hdfs-worker-pool", FLAGS_num_hdfs_worker_threads, 1024)),
     request_pool_service_(new RequestPoolService()),
-    frontend_(new Frontend()),
+    frontend_(),
     enable_webserver_(FLAGS_enable_webserver),
     tz_database_(TimezoneDatabase()),
     is_fe_tests_(false),
@@ -181,7 +181,7 @@ ExecEnv::ExecEnv(const string& hostname, int backend_port, int subscriber_port,
     hdfs_op_thread_pool_(
         CreateHdfsOpThreadPool("hdfs-worker-pool", FLAGS_num_hdfs_worker_threads, 1024)),
     request_pool_service_(new RequestPoolService()),
-    frontend_(new Frontend()),
+    frontend_(),
     enable_webserver_(FLAGS_enable_webserver && webserver_port > 0),
     tz_database_(TimezoneDatabase()),
     is_fe_tests_(false),
@@ -242,19 +242,6 @@ void ExecEnv::InitRm() {
       metrics_.get()));
   cgroups_mgr_.reset(new CgroupsMgr(metrics_.get()));
 
-  TGetHadoopConfigRequest config_request;
-  config_request.__set_name(PSEUDO_DISTRIBUTED_CONFIG_KEY);
-  TGetHadoopConfigResponse config_response;
-  frontend_->GetHadoopConfig(config_request, &config_response);
-  if (config_response.__isset.value) {
-    to_lower(config_response.value);
-    is_pseudo_distributed_llama_ = (config_response.value == "true");
-  } else {
-    is_pseudo_distributed_llama_ = false;
-  }
-  if (is_pseudo_distributed_llama_) {
-    LOG(INFO) << "Pseudo-distributed Llama cluster detected";
-  }
 }
 
 ExecEnv::~ExecEnv() {

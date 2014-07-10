@@ -15,6 +15,8 @@
 #include "runtime/plan-fragment-executor.h"
 
 #include <thrift/protocol/TDebugProtocol.h>
+#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/transport/TFileTransport.h>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/foreach.hpp>
@@ -70,10 +72,19 @@ PlanFragmentExecutor::~PlanFragmentExecutor() {
   DCHECK(!report_thread_active_);
 }
 
-Status PlanFragmentExecutor::Prepare(const TExecPlanFragmentParams& request) {
+void dump_request(const TExecPlanFragmentParams& req) {
+  using namespace apache::thrift::transport;
+  using namespace apache::thrift::protocol;
   FILE* fout = fopen("TExecPlanFragmentParams.txt", "a");
-  fprintf(fout, "%s\n", apache::thrift::ThriftDebugString(request).c_str());
+  fprintf(fout, "%s\n", apache::thrift::ThriftDebugString(req).c_str());
+  fprintf(fout, "----------------------------------------------\n");
   fclose(fout);
+  boost::shared_ptr<TFileTransport> transport(new TFileTransport("TExecPlanFragmentParams.bin"));
+  boost::shared_ptr<TBinaryProtocol> proto(new TBinaryProtocol(transport));
+  req.write(proto.get());
+}
+
+Status PlanFragmentExecutor::Prepare(const TExecPlanFragmentParams& request) {
   fragment_sw_.Start();
   const TPlanFragmentExecParams& params = request.params;
   query_id_ = request.fragment_instance_ctx.query_ctx.query_id;
@@ -94,6 +105,43 @@ Status PlanFragmentExecutor::Prepare(const TExecPlanFragmentParams& request) {
 
   runtime_state_.reset(
       new RuntimeState(request.fragment_instance_ctx, cgroup, exec_env_));
+
+  // Register after setting runtime_state_ to ensure proper cleanup.
+  if (FLAGS_enable_rm && !cgroup.empty() && request.__isset.reserved_resource) {
+    bool is_first;
+    RETURN_IF_ERROR(exec_env_->cgroups_mgr()->RegisterFragment(
+        request.fragment_instance_ctx.fragment_instance_id, cgroup, &is_first));
+    // The first fragment using cgroup sets the cgroup's CPU shares based on the reserved
+    // resource.
+    if (is_first) {
+      DCHECK(request.__isset.reserved_resource);
+      int32_t cpu_shares = exec_env_->cgroups_mgr()->VirtualCoresToCpuShares(
+          request.reserved_resource.v_cpu_cores);
+      RETURN_IF_ERROR(exec_env_->cgroups_mgr()->SetCpuShares(cgroup, cpu_shares));
+    }
+  }
+
+  // TODO: Find the reservation id when the resource request is not set
+  if (FLAGS_enable_rm && request.__isset.reserved_resource) {
+    TUniqueId reservation_id;
+    reservation_id << request.reserved_resource.reservation_id;
+
+    // TODO: Combine this with RegisterFragment() etc.
+    QueryResourceMgr* res_mgr;
+    bool is_first = exec_env_->resource_broker()->GetQueryResourceMgr(query_id_,
+        reservation_id, request.local_resource_address, &res_mgr);
+    DCHECK(res_mgr != NULL);
+    runtime_state_->SetQueryResourceMgr(res_mgr);
+    if (is_first) {
+      runtime_state_->query_resource_mgr()->InitVcoreAcquisition(
+          request.reserved_resource.v_cpu_cores);
+    }
+  }
+
+  DCHECK(!params.request_pool.empty());
+  RETURN_IF_ERROR(runtime_state_->InitMemTrackers(query_id_, &params.request_pool,
+      0));
+
 
   // set up desc tbl
   DescriptorTbl* desc_tbl = NULL;
@@ -141,6 +189,12 @@ Status PlanFragmentExecutor::Prepare(const TExecPlanFragmentParams& request) {
     scan_node->SetScanRanges(scan_ranges);
   }
 
+  RuntimeProfile::Counter* prepare_timer = ADD_TIMER(profile(), "PrepareTime");
+  {
+    SCOPED_TIMER(prepare_timer);
+    RETURN_IF_ERROR(plan_->Prepare(runtime_state_.get()));
+  }
+
   PrintVolumeIds(params.per_node_scan_ranges);
 
   // set up sink, if required
@@ -157,6 +211,11 @@ Status PlanFragmentExecutor::Prepare(const TExecPlanFragmentParams& request) {
   } else {
     sink_.reset(NULL);
   }
+
+  // set up profile counters
+  profile()->AddChild(plan_->runtime_profile());
+  rows_produced_counter_ =
+      ADD_COUNTER(profile(), "RowsProduced", TCounterType::UNIT);
 
   row_batch_.reset(new RowBatch(plan_->row_desc(), runtime_state_->batch_size(),
         runtime_state_->instance_mem_tracker()));
@@ -197,6 +256,18 @@ void PlanFragmentExecutor::PrintVolumeIds(
 Status PlanFragmentExecutor::Open() {
   VLOG_QUERY << "Open(): instance_id="
       << runtime_state_->fragment_instance_id();
+  // we need to start the profile-reporting thread before calling Open(), since it
+  // may block
+  if (!report_status_cb_.empty() && FLAGS_status_report_interval > 0) {
+    unique_lock<mutex> l(report_thread_lock_);
+    report_thread_.reset(
+        new Thread("plan-fragment-executor", "report-profile",
+            &PlanFragmentExecutor::ReportProfile, this));
+    // make sure the thread started up, otherwise ReportProfile() might get into a race
+    // with StopReportThread()
+    report_thread_started_cv_.wait(l);
+    report_thread_active_ = true;
+  }
 
   OptimizeLlvmModule();
 
@@ -212,7 +283,10 @@ Status PlanFragmentExecutor::Open() {
 }
 
 Status PlanFragmentExecutor::OpenInternal() {
-  RETURN_IF_ERROR(plan_->Open(runtime_state_.get()));
+  {
+    SCOPED_TIMER(profile()->total_time_counter());
+    RETURN_IF_ERROR(plan_->Open(runtime_state_.get()));
+  }
 
   if (sink_.get() == NULL) return Status::OK;
 
@@ -233,6 +307,7 @@ Status PlanFragmentExecutor::OpenInternal() {
       }
     }
 
+    SCOPED_TIMER(profile()->total_time_counter());
     RETURN_IF_ERROR(sink_->Send(runtime_state(), batch, done_));
   }
 
@@ -252,12 +327,80 @@ Status PlanFragmentExecutor::OpenInternal() {
 }
 
 void PlanFragmentExecutor::ReportProfile() {
+  VLOG_FILE << "ReportProfile(): instance_id="
+      << runtime_state_->fragment_instance_id();
+  DCHECK(!report_status_cb_.empty());
+  unique_lock<mutex> l(report_thread_lock_);
+  // tell Open() that we started
+  report_thread_started_cv_.notify_one();
+
+  // Jitter the reporting time of remote fragments by a random amount between
+  // 0 and the report_interval.  This way, the coordinator doesn't get all the
+  // updates at once so its better for contention as well as smoother progress
+  // reporting.
+  int report_fragment_offset = rand() % FLAGS_status_report_interval;
+  system_time timeout = get_system_time()
+      + posix_time::seconds(report_fragment_offset);
+  // We don't want to wait longer than it takes to run the entire fragment.
+  stop_report_thread_cv_.timed_wait(l, timeout);
+
+  while (report_thread_active_) {
+    system_time timeout = get_system_time()
+        + posix_time::seconds(FLAGS_status_report_interval);
+
+    // timed_wait can return because the timeout occurred or the condition variable
+    // was signaled.  We can't rely on its return value to distinguish between the
+    // two cases (e.g. there is a race here where the wait timed out but before grabbing
+    // the lock, the condition variable was signaled).  Instead, we will use an external
+    // flag, report_thread_active_, to coordinate this.
+    stop_report_thread_cv_.timed_wait(l, timeout);
+
+    if (VLOG_FILE_IS_ON) {
+      VLOG_FILE << "Reporting " << (!report_thread_active_ ? "final " : " ")
+          << "profile for instance " << runtime_state_->fragment_instance_id();
+      stringstream ss;
+      profile()->PrettyPrint(&ss);
+      VLOG_FILE << ss.str();
+    }
+
+    if (!report_thread_active_)
+      break;
+
+    if (completed_report_sent_.Read() == 0) {
+      // No complete fragment report has been sent.
+      SendReport(false);
+    }
+  }
+
+  VLOG_FILE << "exiting reporting thread: instance_id="
+      << runtime_state_->fragment_instance_id();
 }
 
 void PlanFragmentExecutor::SendReport(bool done) {
+  if (report_status_cb_.empty())
+    return;
+
+  Status status;
+  {
+    lock_guard<mutex> l(status_lock_);
+    status = status_;
+  }
+
+  // This will send a report even if we are cancelled.  If the query completed correctly
+  // but fragments still need to be cancelled (e.g. limit reached), the coordinator will
+  // be waiting for a final report and profile.
+  report_status_cb_(status, profile(), done || !status.ok());
 }
 
 void PlanFragmentExecutor::StopReportThread() {
+  if (!report_thread_active_)
+    return;
+  {
+    lock_guard<mutex> l(report_thread_lock_);
+    report_thread_active_ = false;
+  }
+  stop_report_thread_cv_.notify_one();
+  report_thread_->Join();
 }
 
 Status PlanFragmentExecutor::GetNext(RowBatch** batch) {
@@ -299,9 +442,43 @@ Status PlanFragmentExecutor::GetNextInternal(RowBatch** batch) {
 }
 
 void PlanFragmentExecutor::FragmentComplete() {
+  // Check the atomic flag. If it is set, then a fragment complete report has already
+  // been sent.
+  bool send_report = completed_report_sent_.Swap(0,1);
+
+  fragment_sw_.Stop();
+  int64_t cpu_and_wait_time = fragment_sw_.ElapsedTime();
+  fragment_sw_ = MonotonicStopWatch();
+  int64_t cpu_time = cpu_and_wait_time
+      - runtime_state_->total_storage_wait_timer()->value()
+      - runtime_state_->total_network_send_timer()->value()
+      - runtime_state_->total_network_receive_timer()->value();
+  // Timing is not perfect.
+  if (cpu_time < 0)
+    cpu_time = 0;
+  runtime_state_->total_cpu_timer()->Update(cpu_time);
+
+  ReleaseThreadToken();
+  StopReportThread();
+  if (send_report) SendReport(true);
 }
 
 void PlanFragmentExecutor::UpdateStatus(const Status& status) {
+  if (status.ok())
+    return;
+
+  bool send_report = completed_report_sent_.Swap(0,1);
+
+  {
+    lock_guard<mutex> l(status_lock_);
+    if (status_.ok()) {
+      if (status.IsMemLimitExceeded()) runtime_state_->SetMemLimitExceeded();
+      status_ = status;
+    }
+  }
+
+  StopReportThread();
+  if (send_report) SendReport(true);
 }
 
 void PlanFragmentExecutor::Cancel() {
@@ -325,6 +502,16 @@ bool PlanFragmentExecutor::ReachedLimit() {
 }
 
 void PlanFragmentExecutor::ReleaseThreadToken() {
+  if (has_thread_token_) {
+    has_thread_token_ = false;
+    runtime_state_->resource_pool()->ReleaseThreadToken(true);
+    if (runtime_state_->query_resource_mgr() != NULL) {
+      runtime_state_->query_resource_mgr()->NotifyThreadUsageChange(-1);
+    }
+    PeriodicCounterUpdater::StopSamplingCounter(average_thread_tokens_);
+    PeriodicCounterUpdater::StopTimeSeriesCounter(
+        thread_usage_sampled_counter_);
+  }
 }
 
 void PlanFragmentExecutor::Close() {
@@ -332,6 +519,10 @@ void PlanFragmentExecutor::Close() {
   row_batch_.reset();
   // Prepare may not have been called, which sets runtime_state_
   if (runtime_state_.get() != NULL) {
+    if (runtime_state_->query_resource_mgr() != NULL) {
+      exec_env_->cgroups_mgr()->UnregisterFragment(
+          runtime_state_->fragment_instance_id(), runtime_state_->cgroup());
+    }
     if (plan_ != NULL) plan_->Close(runtime_state_.get());
     if (sink_.get() != NULL) sink_->Close(runtime_state());
     BOOST_FOREACH(DiskIoMgr::RequestContext* context,
@@ -339,6 +530,10 @@ void PlanFragmentExecutor::Close() {
       runtime_state_->io_mgr()->UnregisterContext(context);
     }
     exec_env_->thread_mgr()->UnregisterPool(runtime_state_->resource_pool());
+  }
+  if (mem_usage_sampled_counter_ != NULL) {
+    PeriodicCounterUpdater::StopTimeSeriesCounter(mem_usage_sampled_counter_);
+    mem_usage_sampled_counter_ = NULL;
   }
   closed_ = true;
 }

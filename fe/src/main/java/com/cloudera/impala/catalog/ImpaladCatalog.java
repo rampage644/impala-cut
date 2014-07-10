@@ -108,7 +108,7 @@ public class ImpaladCatalog extends Catalog {
   private AuthorizationChecker authzChecker_;
 
   // Flag to determine if the Catalog is ready to accept user requests. See isReady().
-  private final AtomicBoolean isReady_ = new AtomicBoolean(false);
+  private final AtomicBoolean isReady_ = new AtomicBoolean(true);
 
   // Tracks modifications to this Impalad's catalog from direct updates to the cache.
   private final CatalogDeltaLog catalogDeltaLog_ = new CatalogDeltaLog();
