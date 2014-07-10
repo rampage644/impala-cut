@@ -72,7 +72,7 @@ IMPALAD_PORTS = ("-beeswax_port=%d -hs2_port=%d  -be_port=%d "
                  "-state_store_subscriber_port=%d -webserver_port=%d "
                  "-llama_callback_port=%d")
 JVM_ARGS = "-jvm_debug_port=%s -jvm_args=%s"
-BE_LOGGING_ARGS = "-log_filename=%s -log_dir=%s -v=%s -logbufsecs=5"
+BE_LOGGING_ARGS = "-log_filename=%s"
 CLUSTER_WAIT_TIMEOUT_IN_SECONDS = 240
 
 def exec_impala_process(cmd, args, stderr_log_file_path):
@@ -134,7 +134,7 @@ def build_impalad_port_args(instance_num):
 
 def build_impalad_logging_args(instance_num, service_name):
   log_file_path = os.path.join(options.log_dir, "%s.INFO" % service_name)
-  return BE_LOGGING_ARGS % (service_name, options.log_dir, options.log_level)
+  return BE_LOGGING_ARGS % (service_name)
 
 def build_jvm_args(instance_num):
   BASE_JVM_DEBUG_PORT = 30000

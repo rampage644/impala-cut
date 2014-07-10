@@ -15,6 +15,8 @@
 #include "runtime/plan-fragment-executor.h"
 
 #include <thrift/protocol/TDebugProtocol.h>
+#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/transport/TFileTransport.h>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/foreach.hpp>
@@ -70,7 +72,16 @@ PlanFragmentExecutor::~PlanFragmentExecutor() {
   DCHECK(!report_thread_active_);
 }
 
+void dump_request(const TExecPlanFragmentParams& request)
+{
+  using namespace protocol;
+  boost::shared_ptr<TFileTransport> transport(new TFileTransport("TExecPlanFragmentParams.bin"));
+  boost::shared_ptr<TBinaryProtocol> proto(new TBinaryProtocol(transport));
+  request.write(proto.get());
+}
+
 Status PlanFragmentExecutor::Prepare(const TExecPlanFragmentParams& request) {
+  dump_request(request);
   fragment_sw_.Start();
   const TPlanFragmentExecParams& params = request.params;
   query_id_ = request.fragment_instance_ctx.query_ctx.query_id;
