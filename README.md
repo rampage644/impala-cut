@@ -15,6 +15,21 @@ You will need _Boost 1.46.1_ installed. CMake will search system directories for
 + Add `"-I${Boost_INCLUDE_DIRS}"` to `IR_COMPILE_FLAGS` of `be/CMakeLists.txt`
 + Remove `COMPILE_TO_IR` function from `be/src/udf_samples/CMakeLists.txt`
 
+## LLVM
+
+    wget http://llvm.org/releases/3.3/llvm-3.3.src.tar.gz
+    tar xvzf llvm-3.3.src.tar.gz
+    cd llvm-3.3.src/tools
+    svn co http://llvm.org/svn/llvm-project/cfe/tags/RELEASE_33/final/ clang
+    cd ../projects
+    svn co http://llvm.org/svn/llvm-project/compiler-rt/tags/RELEASE_33/final/ compiler-rt
+    cd ..
+    ./configure --with-pic
+    make -j4 REQUIRES_RTTI=1
+    sudo make install
+
+You can skip installing and just set `LLVM_HOME` environment variable to build `bin` directory.
+
 ## Archlinux specific
 
 + Add `-lcrypto` to `be/CMakeLists.txt`
