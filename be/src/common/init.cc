@@ -40,7 +40,6 @@
 
 DECLARE_string(hostname);
 // TODO: renamed this to be more generic when we have a good CM release to do so.
-DECLARE_int32(logbufsecs);
 DECLARE_bool(abort_on_config_error);
 DECLARE_string(heap_profile_dir);
 DECLARE_bool(enable_process_lifetime_heap_profiling);
