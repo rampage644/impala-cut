@@ -23,11 +23,24 @@ You will need _Boost 1.46.1_ installed. CMake will search system directories for
 + Replace `python` with `python2` at `bin/impala-shell.sh`
 + Replace `python` with `python2` at `shell/impala-shell`
 + Comment out extending `PYTHONPATH` with _THRIFT_ directories at `bin/set-pythonpath.sh`# 
++ Remove `DECLARE_int32(logbufsecs);` from `be/src/common/init.cc`
+
+Workaroung somehow python2/3 issue:
+
+    ln -s `which python2` python
+    export PATH=`pwd`:$PATH
 
 ## Build script
 
     ./buildall.sh
 
+If you have to rebuild you better use
+
+    ./buildall.sh -noclean 
+    # OR
+    make impalad
+    # OR
+    make plan-fragment-executor-test
 
 # How to run single-node cluster
 
