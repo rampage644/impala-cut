@@ -157,6 +157,7 @@ set(CLANG_INCLUDE_FLAGS
   # Required so that jni.h can be found during Clang compilation
   "-I${JAVA_INCLUDE_PATH}"
   "-I${JAVA_INCLUDE_PATH2}"
+  "-I${Boost_INCLUDE_DIRS}"
 )
 
 # allow linking of static libs into dynamic lib
@@ -220,7 +221,7 @@ set (IMPALA_LINK_LIBS
   ${LIBZ}
   ${LIBBZ2}
   ${AVRO_STATIC_LIB}
-  -lrt -lboost_date_time
+  -lrt -lboost_date_time -lcrypto
 )
 
 
@@ -269,7 +270,7 @@ ENDFUNCTION()
 # src-file-ir target that can be built.
 # e.g. COMPILE_TO_IR(test.cc) generates the "test-ir" make target.
 # Note: this is duplicated in udf_samples/CMakeLists.txt
-set(IR_COMPILE_FLAGS "-emit-llvm" "-O3" "-c" "-I../")
+set(IR_COMPILE_FLAGS "-emit-llvm" "-O3" "-c" "-I../" "-I${Boost_INCLUDE_DIRS}")
 function(COMPILE_TO_IR SRC_FILE)
   get_filename_component(BASE_NAME ${SRC_FILE} NAME_WE)
   set(OUTPUT_FILE "${LIBRARY_OUTPUT_PATH}/${BASE_NAME}.ll")

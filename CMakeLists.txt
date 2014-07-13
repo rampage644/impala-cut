@@ -27,6 +27,8 @@ find_package(PICLibs REQUIRED)
 # find boost headers and libs
 set(Boost_DEBUG TRUE)
 set(Boost_USE_MULTITHREADED ON)
+set(BOOST_ROOT "/home/ramp/soft/boost_1_46_1/install")
+set(Boost_NO_SYSTEM_PATHS ON)
 find_package(Boost REQUIRED COMPONENTS thread regex-mt system-mt filesystem-mt)
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${Boost_LIBRARIES})

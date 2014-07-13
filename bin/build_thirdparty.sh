@@ -131,6 +131,7 @@ if [ $BUILD_ALL -eq 1 ] || [ $BUILD_THRIFT -eq 1 ]; then
     PIC_LIB_OPTIONS="--with-zlib=${PIC_LIB_PATH} "
   fi
   JAVA_PREFIX=${THRIFT_HOME}/java PY_PREFIX=${THRIFT_HOME}/python \
+  PYTHON=`which python2` \
     ./configure --with-pic --prefix=${THRIFT_HOME} \
     --with-php=no --with-java=no --with-perl=no --with-erlang=no \
     --with-ruby=no --with-haskell=no --with-erlang=no --with-d=no \
@@ -169,6 +170,7 @@ fi
 # Build glog
 if [ $BUILD_ALL -eq 1 ] || [ $BUILD_GLOG -eq 1 ]; then
   build_preamble  $IMPALA_HOME/thirdparty/glog-${IMPALA_GLOG_VERSION} GLog
+  GFLAGS_INSTALL=`pwd`/third-party-install \
   ./configure --with-pic --with-gflags=${GFLAGS_INSTALL}
   # SLES's gcc45-c++ is required for sse2 support (default is 4.3), but crashes
   # when building logging_unittest-logging_unittest.o. Telling it to uses the
