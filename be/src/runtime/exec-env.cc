@@ -59,7 +59,7 @@ DEFINE_string(state_store_host, "localhost",
     "hostname where StatestoreService is running");
 DEFINE_int32(state_store_subscriber_port, 23000,
     "port where StatestoreSubscriberService should be exported");
-DEFINE_int32(num_hdfs_worker_threads, 16,
+DEFINE_int32(num_hdfs_worker_threads, 1,
     "(Advanced) The number of threads in the global HDFS operation pool");
 
 DECLARE_int32(state_store_port);

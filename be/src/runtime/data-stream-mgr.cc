@@ -18,6 +18,8 @@
 #include <boost/functional/hash.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/thread.hpp>
+#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/transport/TFileTransport.h>
 
 #include "runtime/row-batch.h"
 #include "runtime/data-stream-recvr.h"
@@ -80,6 +82,16 @@ shared_ptr<DataStreamRecvr> DataStreamMgr::FindRecvr(
   }
   if (acquire_lock) lock_.unlock();
   return shared_ptr<DataStreamRecvr>();
+}
+
+void dump(const TRowBatch& obj, const char* name)
+{
+  using namespace apache::thrift::protocol;
+  using namespace apache::thrift::transport;
+
+  boost::shared_ptr<TFileTransport> transport(new TFileTransport(name));
+  boost::shared_ptr<TBinaryProtocol> proto(new TBinaryProtocol(transport));
+  obj.write(proto.get());
 }
 
 Status DataStreamMgr::AddData(

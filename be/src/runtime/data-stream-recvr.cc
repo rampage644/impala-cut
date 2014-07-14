@@ -115,7 +115,7 @@ Status DataStreamRecvr::SenderQueue::GetBatch(RowBatch** next_batch) {
     // Don't count time spent waiting on the sender as active time.
     SCOPED_TIMER(recvr_->data_arrival_timer_);
     SCOPED_TIMER(received_first_batch_ ? NULL : recvr_->first_batch_wait_total_timer_);
-    data_arrival_cv_.wait(l);
+//    data_arrival_cv_.wait(l);
   }
 
   // cur_batch_ must be replaced with the returned batch.
