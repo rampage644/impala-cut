@@ -17,6 +17,8 @@
 #include <limits>
 #include <map>
 #include <thrift/protocol/TDebugProtocol.h>
+#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/transport/TFileTransport.h>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
@@ -287,8 +289,20 @@ static void ProcessQueryOptions(
       << "Do not use CLOSE:WAIT debug actions "
       << "because nodes cannot be cancelled in Close()";
 }
+template <class T>
+void dump(const T& obj, const char* name)
+{
+  using namespace apache::thrift::protocol;
+  using namespace apache::thrift::transport;
+
+  boost::shared_ptr<TFileTransport> transport(new TFileTransport(name));
+  boost::shared_ptr<TBinaryProtocol> proto(new TBinaryProtocol(transport));
+  obj.write(proto.get());
+}
 
 Status Coordinator::Exec(QuerySchedule& schedule, vector<Expr*>* output_exprs) {
+  dump(schedule.request(), "QuerySchedule.request.bin");
+  dump(schedule.query_options(), "QuerySchedule.options.bin");
   const TQueryExecRequest& request = schedule.request();
   DCHECK_GT(request.fragments.size(), 0);
   needs_finalization_ = request.__isset.finalize_params;
