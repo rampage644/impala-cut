@@ -43,29 +43,6 @@ void load_request(const char* filename, T& req)
   req.read(proto.get());
 }
 
-void Sender(int sender_num, int channel_buffer_size,
-            impala::TPartitionType::type partition_type) {
-//  impala::RuntimeState state(impala::TPlanFragmentInstanceCtx(), "", env.get());
-//  impala::TDataStreamSink sink;
-//  sink.dest_node_id = 1;
-//  sink.output_partition.type = impala::TPartitionType::UNPARTITIONED;
-
-//  impala::DataStreamSender sender(
-//      &obj_pool_, sender_num, *row_desc_, sink, dest_, channel_buffer_size);
-//  EXPECT_TRUE(sender.Prepare(&state).ok());
-//  EXPECT_TRUE(sender.Open(&state).ok());
-
-//  BATCH("TRowBatch.bin");
-
-//  sender.Send(&state, &obj, true);
-//  sender.Close(&state);
-}
-
-void JoinSenders() {
-  boost::thread* thr = new boost::thread(&Sender, 1, 1024, impala::TPartitionType::UNPARTITIONED);
-  thr->join();
-}
-
 
 TEST(ExecutorTest, Basic)
 {
@@ -122,6 +99,12 @@ TEST(ExecutorTest, SelectFromTable)
   ASSERT_EQ(exec.Open().code(), TStatusCode::OK);
   env->stream_mgr()->CloseSender(request.fragment_instance_ctx.fragment_instance_id, 1, 0);
   ASSERT_EQ(exec.GetNext(&batch).code(), TStatusCode::OK);
+  ASSERT_EQ(batch->num_rows(), 5);
+  ASSERT_STREQ(PrintRow(batch->GetRow(0), batch->row_desc()).c_str(), "[(1 1)]");
+  ASSERT_STREQ(PrintRow(batch->GetRow(1), batch->row_desc()).c_str(), "[(2 2)]");
+  ASSERT_STREQ(PrintRow(batch->GetRow(2), batch->row_desc()).c_str(), "[(3 3)]");
+  ASSERT_STREQ(PrintRow(batch->GetRow(3), batch->row_desc()).c_str(), "[(4 4)]");
+  ASSERT_STREQ(PrintRow(batch->GetRow(4), batch->row_desc()).c_str(), "[(10 10)]");
 
 }
 
