@@ -14,12 +14,15 @@
 
 #include "runtime/plan-fragment-executor.h"
 
+#include <algorithm>
+
 #include <thrift/protocol/TDebugProtocol.h>
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <thrift/transport/TFileTransport.h>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "codegen/llvm-codegen.h"
 #include "common/logging.h"
@@ -74,8 +77,13 @@ PlanFragmentExecutor::~PlanFragmentExecutor() {
 
 void dump_request(const TExecPlanFragmentParams& request)
 {
+  static int count = 1;
+  std::string filename = request.fragment_instance_ctx.query_ctx.request.stmt;
+  std::replace(filename.begin(), filename.end(), ' ', '_');
+  filename.append(".bin.");
+  filename.append(boost::lexical_cast<std::string>(count++));
   using namespace protocol;
-  boost::shared_ptr<TFileTransport> transport(new TFileTransport("TExecPlanFragmentParams.bin"));
+  boost::shared_ptr<TFileTransport> transport(new TFileTransport(filename.c_str()));
   boost::shared_ptr<TBinaryProtocol> proto(new TBinaryProtocol(transport));
   request.write(proto.get());
 }
