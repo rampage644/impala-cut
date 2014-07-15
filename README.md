@@ -73,3 +73,10 @@ If you have to rebuild you better use
 It depends on `TExecPlanFragmentParams.bin` file containing 'executor-ready' serialized query `select 1002;`.
 
     ./be/build/runtime/plan-fragment-executor-tests
+
+# How to debug impala with GDB
+
+1. Start the whole cluster
+2. Stop impalad daemon
+3. Run impalad daemon with gdb via `./bin/start-impala.sh -gdb`
+4. Run `handle SIGSEGV nostop noprint pass` in GDB
