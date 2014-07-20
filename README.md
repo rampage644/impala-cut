@@ -1,4 +1,4 @@
-# How to build
+2# How to build
 
 Make sure you have _Oracle JDK 7_ installed. 
     
@@ -70,7 +70,7 @@ If you have to rebuild you better use
 
 # Run _executor_ test
 
-It depends on `TExecPlanFragmentParams.bin` file containing 'executor-ready' serialized query `select 1002;`.
+It depends on `*.bin` files containing 'executor-ready' serialized queries.
 
     ./be/build/runtime/plan-fragment-executor-tests
 
