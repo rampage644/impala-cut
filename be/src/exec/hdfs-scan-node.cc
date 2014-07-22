@@ -397,13 +397,7 @@ Status HdfsScanNode::Prepare(RuntimeState* state) {
     is_materialized_col_[i] = column_idx_to_materialized_slot_idx_[i] != SKIP_COLUMN;
   }
 
-  hdfs_connection_ = HdfsFsCache::instance()->GetDefaultConnection();
-  if (hdfs_connection_ == NULL) {
-    string error_msg = GetStrErrMsg();
-    stringstream ss;
-    ss << "Failed to connect to HDFS." << "\n" << error_msg;
-    return Status(ss.str());
-  }
+  hdfs_connection_ = NULL;
 
   // Convert the TScanRangeParams into per-file DiskIO::ScanRange objects and populate
   // file_descs_ and per_type_files_.
@@ -488,11 +482,6 @@ Status HdfsScanNode::Prepare(RuntimeState* state) {
     DCHECK(partition_desc != NULL);
     RETURN_IF_ERROR(partition_desc->PrepareExprs(state));
   }
-
-  // Update server wide metrics for number of scan ranges and ranges that have
-  // incomplete metadata.
-  ImpaladMetrics::NUM_RANGES_PROCESSED->Increment(scan_range_params_->size());
-  ImpaladMetrics::NUM_RANGES_MISSING_VOLUME_ID->Increment(num_ranges_missing_volume_id);
 
   // Add per volume stats to the runtime profile
   PerVolumnStats per_volume_stats;
@@ -995,12 +984,6 @@ void HdfsScanNode::StopAndFinalizeCounters() {
         runtime_state_->io_mgr()->bytes_read_short_circuit(reader_context_));
     bytes_read_dn_cache_->Set(
         runtime_state_->io_mgr()->bytes_read_dn_cache(reader_context_));
-
-    ImpaladMetrics::IO_MGR_BYTES_READ->Increment(bytes_read_counter()->value());
-    ImpaladMetrics::IO_MGR_LOCAL_BYTES_READ->Increment(
-        bytes_read_local_->value());
-    ImpaladMetrics::IO_MGR_SHORT_CIRCUIT_BYTES_READ->Increment(
-        bytes_read_short_circuit_->value());
   }
 }
 

@@ -6,6 +6,7 @@
 #include "runtime/data-stream-mgr.h"
 #include "runtime/data-stream-sender.h"
 #include "runtime/descriptors.h"
+#include "runtime/mem-tracker.h"
 #include "codegen/llvm-codegen.h"
 #include "runtime/plan-fragment-executor.h"
 #include "runtime/row-batch.h"
@@ -105,7 +106,19 @@ TEST(ExecutorTest, SelectFromTable)
   ASSERT_STREQ(PrintRow(batch->GetRow(2), batch->row_desc()).c_str(), "[(3 3)]");
   ASSERT_STREQ(PrintRow(batch->GetRow(3), batch->row_desc()).c_str(), "[(4 4)]");
   ASSERT_STREQ(PrintRow(batch->GetRow(4), batch->row_desc()).c_str(), "[(10 10)]");
+}
 
+TEST(ExecutorTest, ScanNode)
+{
+  using namespace impala;
+  PlanFragmentExecutor exec(env.get(), NULL);
+
+  // this serialized query contains HdfsScanNode part
+  REQUEST("select_*_from_test.text_ass.bin.2");
+  request.fragment.__isset.output_sink = false;
+
+  ASSERT_EQ(exec.Prepare(request).code(), TStatusCode::OK);
+  ASSERT_EQ(exec.Open().code(), TStatusCode::OK);
 }
 
 
@@ -118,7 +131,10 @@ int main(int argc, char **argv) {
   impala::TimestampParser::Init();
   impala::LlvmCodeGen::InitializeLlvm();
   env.reset(new impala::ExecEnv());
+  // hack
+  env->InitForFeTests();
   ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  RUN_ALL_TESTS();
+  env.reset();
 }
 

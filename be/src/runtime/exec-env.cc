@@ -249,6 +249,7 @@ ExecEnv::~ExecEnv() {
 
 Status ExecEnv::InitForFeTests() {
   mem_tracker_.reset(new MemTracker(-1, "Process"));
+  disk_io_mgr_->Init(mem_tracker_.get());
   is_fe_tests_ = true;
   return Status::OK;
 }
