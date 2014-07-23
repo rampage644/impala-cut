@@ -140,7 +140,7 @@ Status PlanFragmentExecutor::Prepare(const TExecPlanFragmentParams& request) {
 
   DCHECK(!params.request_pool.empty());
   RETURN_IF_ERROR(runtime_state_->InitMemTrackers(query_id_, &params.request_pool,
-      0));
+      -1));
 
 
   // set up desc tbl

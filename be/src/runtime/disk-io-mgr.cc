@@ -543,7 +543,7 @@ Status DiskIoMgr::Read(RequestContext* reader,
   RETURN_IF_ERROR(AddScanRanges(reader, ranges, true));
   RETURN_IF_ERROR(range->GetNext(buffer));
   DCHECK((*buffer) != NULL);
-  DCHECK((*buffer)->eosr());
+//  DCHECK((*buffer)->eosr());
   return Status::OK;
 }
 
@@ -641,7 +641,7 @@ void DiskIoMgr::GcIoBuffers() {
     for (list<char*>::iterator iter = free_buffers_[idx].begin();
          iter != free_buffers_[idx].end(); ++iter) {
       int64_t buffer_size = (1 << idx) * min_buffer_size_;
-      process_mem_tracker_->Release(buffer_size);
+//      process_mem_tracker_->Release(buffer_size);
       --num_allocated_buffers_;
       delete[] *iter;
 
