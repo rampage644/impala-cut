@@ -140,7 +140,7 @@ TEST(ExecutorTest, ScanNodeWithParquetFile)
   PlanFragmentExecutor exec(env.get(), NULL);
 
   // this serialized query contains HdfsScanNode part
-  REQUEST("select_*_from_test.text_ass.bin.2");
+  REQUEST("select_*_from_test.parqu.bin.2");
   request.fragment.__isset.output_sink = false;
 //  request.desc_tbl.tableDescriptors[0].hdfsTable.hdfsBaseDir = "";
 //  request.desc_tbl.tableDescriptors[0].hdfsTable.partitions[2].file_desc[0].file_name = "table_text.0";
@@ -152,12 +152,10 @@ TEST(ExecutorTest, ScanNodeWithParquetFile)
   RowBatch* batch = NULL;
   ASSERT_EQ(exec.GetNext(&batch).code(), TStatusCode::OK);
   ASSERT_NE(batch, (RowBatch*)NULL);
-  ASSERT_EQ(batch->num_rows(), 5);
-  ASSERT_STREQ(PrintRow(batch->GetRow(0), batch->row_desc()).c_str(), "[(1 1)]");
-  ASSERT_STREQ(PrintRow(batch->GetRow(1), batch->row_desc()).c_str(), "[(2 2)]");
-  ASSERT_STREQ(PrintRow(batch->GetRow(2), batch->row_desc()).c_str(), "[(3 3)]");
-  ASSERT_STREQ(PrintRow(batch->GetRow(3), batch->row_desc()).c_str(), "[(4 4)]");
-  ASSERT_STREQ(PrintRow(batch->GetRow(4), batch->row_desc()).c_str(), "[(10 10)]");
+  ASSERT_EQ(batch->num_rows(), 3);
+  ASSERT_STREQ(PrintRow(batch->GetRow(0), batch->row_desc()).c_str(), "[(1)]");
+  ASSERT_STREQ(PrintRow(batch->GetRow(1), batch->row_desc()).c_str(), "[(2)]");
+  ASSERT_STREQ(PrintRow(batch->GetRow(2), batch->row_desc()).c_str(), "[(3)]");
 }
 
 
