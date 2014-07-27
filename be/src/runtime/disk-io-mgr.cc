@@ -25,14 +25,14 @@ using namespace strings;
 
 // Control the number of disks on the machine.  If 0, this comes from the system
 // settings.
-DEFINE_int32(num_disks, 0, "Number of disks on data node.");
+DEFINE_int32(num_disks, 1, "Number of disks on data node.");
 // Default IoMgr configs.
 // The maximum number of the threads per disk is also the max queue depth per disk.
 // The read size is the size of the reads sent to hdfs/os.
 // There is a trade off of latency and throughout, trying to keep disks busy but
 // not introduce seeks.  The literature seems to agree that with 8 MB reads, random
 // io and sequential io perform similarly.
-DEFINE_int32(num_threads_per_disk, 0, "number of threads per disk");
+DEFINE_int32(num_threads_per_disk, 1, "number of threads per disk");
 DEFINE_int32(read_size, 8 * 1024 * 1024, "Read Size (in bytes)");
 DEFINE_int32(min_buffer_size, 1024, "The minimum read buffer size (in bytes)");
 

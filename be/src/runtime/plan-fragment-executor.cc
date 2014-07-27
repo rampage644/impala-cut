@@ -85,6 +85,8 @@ void dump_request(const TExecPlanFragmentParams& req) {
 }
 
 Status PlanFragmentExecutor::Prepare(const TExecPlanFragmentParams& request) {
+  done_ = false;
+  prepared_ = false;
   fragment_sw_.Start();
   const TPlanFragmentExecParams& params = request.params;
   query_id_ = request.fragment_instance_ctx.query_ctx.query_id;
@@ -254,6 +256,7 @@ void PlanFragmentExecutor::PrintVolumeIds(
 }
 
 Status PlanFragmentExecutor::Open() {
+  closed_ = false;
   VLOG_QUERY << "Open(): instance_id="
       << runtime_state_->fragment_instance_id();
   // we need to start the profile-reporting thread before calling Open(), since it
