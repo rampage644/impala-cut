@@ -18,6 +18,7 @@
 #include "gen-cpp/ImpalaInternalService_types.h"
 #include "gen-cpp/ImpalaInternalService.h"
 #include "gen-cpp/Partitions_types.h"
+#include "rpc/authentication.h"
 
 #define REQUEST(request, file) \
   impala::TExecPlanFragmentParams request; \
@@ -196,10 +197,7 @@ TEST(ExecutorTest, TwoFragmentsConnectedManually)
   ASSERT_STREQ(PrintRow(batch->GetRow(1), batch->row_desc()).c_str(), "[(4 4)]");
   exec.Close();
 }
-TEST(ExecutorTest, TwoFragmentsConnectedAutomatically)
-{
-  FAIL();
-}
+
 
 
 int main(int argc, char **argv) {
