@@ -14,6 +14,7 @@ You will need _Boost 1.46.1_ installed. CMake will search system directories for
 + Add `"-I${Boost_INCLUDE_DIRS}"` to `CLANG_INCLUDE_FLAGS` of `be/CMakeLists.txt`
 + Add `"-I${Boost_INCLUDE_DIRS}"` to `IR_COMPILE_FLAGS` of `be/CMakeLists.txt`
 + Remove `COMPILE_TO_IR` function from `be/src/udf_samples/CMakeLists.txt`
++ Add `--with-boost=<boost-dir>` switch to thrift's `./configure`, fb303's `./configure` and `./bootstrap.sh` in `bin/build_thirdparty.sh`
 
 ## LLVM
 
@@ -39,6 +40,7 @@ You can skip installing and just set `LLVM_HOME` environment variable to build `
 + Replace `python` with `python2` at `shell/impala-shell`
 + Comment out extending `PYTHONPATH` with _THRIFT_ directories at `bin/set-pythonpath.sh`# 
 + Remove `DECLARE_int32(logbufsecs);` from `be/src/common/init.cc`
++ Replace `python` with `python2` in `thirdparty/thrift-0.9.0/contrib/fb303/acinclude.m4`
 
 Workaroung somehow python2/3 issue:
 

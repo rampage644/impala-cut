@@ -216,6 +216,8 @@ static int berkeleydb_open(const char *path,DB **mbdb)
     {
 #if DB_VERSION_MAJOR == 4 && DB_VERSION_MINOR >= 1
 	ret = (*mbdb)->open(*mbdb, NULL, path, NULL, DB_HASH, DB_CREATE, 0664);
+#elif DB_VERSION_MAJOR >= 4
+  ret = (*mbdb)->open(*mbdb, NULL, path, NULL, DB_HASH, DB_CREATE, 0664);
 #else
 	ret = (*mbdb)->open(*mbdb, path, NULL, DB_HASH, DB_CREATE, 0664);
 #endif

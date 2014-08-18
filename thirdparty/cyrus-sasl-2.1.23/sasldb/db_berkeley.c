@@ -102,6 +102,8 @@ static int berkeleydb_open(const sasl_utils_t *utils,
     {
 #if DB_VERSION_MAJOR == 4 && DB_VERSION_MINOR >= 1
 	ret = (*mbdb)->open(*mbdb, NULL, path, NULL, DB_HASH, flags, 0660);
+#elif DB_VERSION_MAJOR >= 5 
+  ret = (*mbdb)->open(*mbdb, NULL, path, NULL, DB_HASH, flags, 0660);
 #else
 	ret = (*mbdb)->open(*mbdb, path, NULL, DB_HASH, flags, 0660);
 #endif

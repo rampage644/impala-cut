@@ -109,6 +109,10 @@ bin=`cd "$bin"; pwd`
 . "$bin"/impala-config.sh
 
 USE_PIC_LIB_PATH=${PIC_LIB_PATH:-}
+CPP_COVFLAGS="-fprofile-arcs -ftest-coverage"
+LD_COVFLAGS="-fprofile-arcs"
+COV_LIBS="-lgcov"
+
 
 function build_preamble() {
   echo
@@ -135,15 +139,17 @@ if [ $BUILD_ALL -eq 1 ] || [ $BUILD_THRIFT -eq 1 ]; then
     ./configure --with-pic --prefix=${THRIFT_HOME} \
     --with-php=no --with-java=no --with-perl=no --with-erlang=no \
     --with-ruby=no --with-haskell=no --with-erlang=no --with-d=no \
-    --with-qt4=no --with-libevent=no ${PIC_LIB_OPTIONS:-}
+    --with-qt4=no --with-libevent=no ${PIC_LIB_OPTIONS:-} \
+    --enable-coverage=yes --with-cpp=yes \
+    --with-boost=${BOOST_ROOT}
   make # Make with -j fails
   make install
   cd ${THRIFT_SRC_DIR}/contrib/fb303
-  chmod 755 ./bootstrap.sh
-  ./bootstrap.sh
+  chmod 755 ./bootstrap.sh 
+  ./bootstrap.sh --with-boost=${BOOST_ROOT}
   chmod 755 configure
   CPPFLAGS="-I${THRIFT_HOME}/include" PY_PREFIX=${THRIFT_HOME}/python ./configure \
-    --prefix=${THRIFT_HOME} --with-thriftpath=${THRIFT_HOME}
+    --prefix=${THRIFT_HOME} --with-thriftpath=${THRIFT_HOME} --with-boost=${BOOST_ROOT}
   make
   make install
 fi
@@ -152,6 +158,9 @@ fi
 if [ $BUILD_ALL -eq 1 ] || [ $BUILD_GFLAGS -eq 1 ]; then
   build_preamble $IMPALA_HOME/thirdparty/gflags-${IMPALA_GFLAGS_VERSION} GFlags
   GFLAGS_INSTALL=`pwd`/third-party-install
+  CPPFLAGS="${CPPFLAGS:-} ${CPP_COVFLAGS}" \
+  LDFLAGS="${LDFLAGS:-} ${LD_COVFLAGS}" \
+  LIBS="${LIBS:-} ${COV_LIBS}" \
   ./configure --with-pic --prefix=${GFLAGS_INSTALL}
   make -j4 install
 fi
@@ -163,6 +172,9 @@ if [ $BUILD_ALL -eq 1 ] || [ $BUILD_PPROF -eq 1 ]; then
   # TODO: google perf tools indicates this might be necessary on 64 bit systems.
   # we're not compiling the rest of our code to not omit frame pointers but it
   # still seems to generate useful profiling data.
+  CPPFLAGS="${CPPFLAGS:-} ${CPP_COVFLAGS}" \
+  LDFLAGS="${LDFLAGS:-} ${LD_COVFLAGS}" \
+  LIBS="${LIBS:-} ${COV_LIBS}" \
   ./configure --enable-frame-pointers --with-pic
   make -j4
 fi
@@ -170,7 +182,10 @@ fi
 # Build glog
 if [ $BUILD_ALL -eq 1 ] || [ $BUILD_GLOG -eq 1 ]; then
   build_preamble  $IMPALA_HOME/thirdparty/glog-${IMPALA_GLOG_VERSION} GLog
-  GFLAGS_INSTALL=`pwd`/third-party-install \
+  GFLAGS_INSTALL=`pwd`/third-party-install
+  CPPFLAGS="${CPPFLAGS:-} ${CPP_COVFLAGS}" \
+  LDFLAGS="${LDFLAGS:-} ${LD_COVFLAGS}" \
+  LIBS="${LIBS:-} ${COV_LIBS}" \
   ./configure --with-pic --with-gflags=${GFLAGS_INSTALL}
   # SLES's gcc45-c++ is required for sse2 support (default is 4.3), but crashes
   # when building logging_unittest-logging_unittest.o. Telling it to uses the
@@ -187,6 +202,9 @@ fi
 # Build gtest
 if [ $BUILD_ALL -eq 1 ] || [ $BUILD_GTEST -eq 1 ]; then
   build_preamble $IMPALA_HOME/thirdparty/gtest-${IMPALA_GTEST_VERSION} GTest
+  CPPFLAGS="${CPPFLAGS:-} ${CPP_COVFLAGS}" \
+  LDFLAGS="${LDFLAGS:-} ${LD_COVFLAGS}" \
+  LIBS="${LIBS:-} ${COV_LIBS}" \
   cmake .
   make -j4
 fi
@@ -194,6 +212,9 @@ fi
 # Build Snappy
 if [ $BUILD_ALL -eq 1 ] || [ $BUILD_SNAPPY -eq 1 ]; then
   build_preamble $IMPALA_HOME/thirdparty/snappy-${IMPALA_SNAPPY_VERSION} Snappy
+  CPPFLAGS="${CPPFLAGS:-} ${CPP_COVFLAGS}" \
+  LDFLAGS="${LDFLAGS:-} ${LD_COVFLAGS}" \
+  LIBS="${LIBS:-} ${COV_LIBS}" \
   ./configure --with-pic --prefix=$IMPALA_HOME/thirdparty/snappy-${IMPALA_SNAPPY_VERSION}/build
   make install
 fi
@@ -201,6 +222,9 @@ fi
 # Build Lz4
 if [ $BUILD_ALL -eq 1 ] || [ $BUILD_LZ4 -eq 1 ]; then
    build_preamble $IMPALA_HOME/thirdparty/lz4 Lz4
+   CFLAGS="${CFLAGS:-} ${CPP_COVFLAGS}" \
+   LDFLAGS="${LDFLAGS:-} ${LD_COVFLAGS}" \
+   LIBS="${LIBS:-} ${COV_LIBS}" \
    cmake .
    make
 fi
@@ -208,12 +232,18 @@ fi
 # Build re2
 if [ $BUILD_ALL -eq 1 ] || [ $BUILD_RE2 -eq 1 ]; then
   build_preamble $IMPALA_HOME/thirdparty/re2 RE2
+  CPPFLAGS="${CPPFLAGS:-} ${CPP_COVFLAGS}" \
+  LDFLAGS="${LDFLAGS:-} ${LD_COVFLAGS}" \
+  LIBS="${LIBS:-} ${COV_LIBS}" \
   make -j4
 fi
 
 # Build Ldap
 if [ $BUILD_ALL -eq 1 ] || [ $BUILD_LDAP -eq 1 ]; then
     build_preamble $IMPALA_HOME/thirdparty/openldap-${IMPALA_OPENLDAP_VERSION} Openldap
+    CPPFLAGS="${CPPFLAGS:-} ${CPP_COVFLAGS}" \
+    LDFLAGS="${LDFLAGS:-} ${LD_COVFLAGS}" \
+    LIBS="${LIBS:-} ${COV_LIBS}" \
     ./configure --enable-slapd=no --prefix=`pwd`/install --enable-static --with-pic
     make -j4
     make -j4 depend
@@ -226,7 +256,11 @@ if [ $BUILD_ALL -eq 1 ] || [ $BUILD_SASL -eq 1 ]; then
     build_preamble $IMPALA_HOME/thirdparty/cyrus-sasl-${IMPALA_CYRUS_SASL_VERSION} Sasl
     # Disable everything except those protocols needed -- currently just Kerberos.
     # Sasl does not have a --with-pic configuration.
-    CFLAGS="-fPIC -DPIC" CXXFLAGS="-fPIC -DPIC" ./configure \
+    CFLAGS="-fPIC -DPIC" CXXFLAGS="-fPIC -DPIC" \
+    CPPFLAGS="${CPPFLAGS:-} ${CPP_COVFLAGS}" \
+    LDFLAGS="${LDFLAGS:-} ${LD_COVFLAGS}" \
+    LIBS="${LIBS:-} ${COV_LIBS}" \
+    ./configure \
       --disable-sql --disable-otp --disable-ldap --disable-digest --with-saslauthd=no \
       --prefix=$IMPALA_HOME/thirdparty/cyrus-sasl-${IMPALA_CYRUS_SASL_VERSION}/build \
       --enable-static --enable-staticdlopen
@@ -239,6 +273,9 @@ fi
 # Build Avro
 if [ $BUILD_ALL -eq 1 ] || [ $BUILD_AVRO -eq 1 ]; then
   build_preamble $IMPALA_HOME/thirdparty/avro-c-${IMPALA_AVRO_VERSION} Avro
+  CPPFLAGS="${CPPFLAGS:-} ${CPP_COVFLAGS}" \
+  LDFLAGS="${LDFLAGS:-} ${LD_COVFLAGS}" \
+  LIBS="${LIBS:-} ${COV_LIBS}" \
   cmake .
   make -j4
 fi

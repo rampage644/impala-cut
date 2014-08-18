@@ -27,9 +27,9 @@
 /**
  * Defined in the flex library
  */
-
+extern "C" {
 int yylex(void);
-
+}
 int yyparse(void);
 
 /**

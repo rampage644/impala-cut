@@ -10,21 +10,18 @@
 
 # First look in ENV{LLVM_HOME} then system path.
 find_program(LLVM_CONFIG_EXECUTABLE llvm-config
-  PATHS
   $ENV{LLVM_HOME}
   NO_DEFAULT_PATH
 )
 find_program(LLVM_CONFIG_EXECUTABLE llvm-config)
 
 find_program(LLVM_CLANG_EXECUTABLE clang++
-  PATHS
   $ENV{LLVM_HOME}
   NO_DEFAULT_PATH
 )
 find_program(LLVM_CLANG_EXECUTABLE clang++)
 
 find_program(LLVM_OPT_EXECUTABLE opt
-  PATHS
   $ENV{LLVM_HOME}
   NO_DEFAULT_PATH
 )
