@@ -109,9 +109,9 @@ bin=`cd "$bin"; pwd`
 . "$bin"/impala-config.sh
 
 USE_PIC_LIB_PATH=${PIC_LIB_PATH:-}
-CPP_COVFLAGS="-fprofile-arcs -ftest-coverage"
-LD_COVFLAGS="-fprofile-arcs"
-COV_LIBS="-lgcov"
+CPP_COVFLAGS=""
+LD_COVFLAGS=""
+COV_LIBS=""
 
 
 function build_preamble() {
@@ -140,7 +140,7 @@ if [ $BUILD_ALL -eq 1 ] || [ $BUILD_THRIFT -eq 1 ]; then
     --with-php=no --with-java=no --with-perl=no --with-erlang=no \
     --with-ruby=no --with-haskell=no --with-erlang=no --with-d=no \
     --with-qt4=no --with-libevent=no ${PIC_LIB_OPTIONS:-} \
-    --enable-coverage=yes --with-cpp=yes \
+    --with-cpp=yes \
     --with-boost=${BOOST_ROOT}
   make # Make with -j fails
   make install
