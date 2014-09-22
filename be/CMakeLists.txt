@@ -33,7 +33,7 @@ PROJECT(ASSEMBLER)
 #  - Wunknown-pragmas: suppress warnings for unknown (compiler specific) pragmas
 #  - pthread: enable multithreaded malloc
 #  - DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG: enable nanosecond precision for boost
-SET(CXX_COMMON_FLAGS "-msse4.2 -Wall -Wno-sign-compare -Wno-unknown-pragmas -pthread")
+SET(CXX_COMMON_FLAGS "-msse4.2 -Wall -Wno-sign-compare -Wno-unknown-pragmas -pthread -fPIC")
 SET(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG")
 SET(CXX_COVERAGE_FLAGS "-fprofile-arcs -ftest-coverage")
 
