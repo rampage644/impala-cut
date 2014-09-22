@@ -170,6 +170,8 @@ CLASSPATH=$IMPALA_FE_DIR/src/test/resources:$CLASSPATH
 CLASSPATH=$HADOOP_LZO/build/hadoop-lzo-0.4.15.jar:$CLASSPATH
 export CLASSPATH
 
+export LLVM_HOME='/home/ramp/mnt/soft/llvm-3.3.src/Release+Asserts/bin'
+
 # Setup aliases
 # Helper alias to script that verifies and merges Gerrit changes
 alias gerrit-verify-merge="${IMPALA_AUX_TEST_HOME}/jenkins/gerrit-verify-merge.sh"
