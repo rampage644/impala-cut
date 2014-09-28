@@ -25,7 +25,7 @@ You will need _Boost 1.46.1_ installed. CMake will search system directories for
     cd ../projects
     svn co http://llvm.org/svn/llvm-project/compiler-rt/tags/RELEASE_33/final/ compiler-rt
     cd ..
-    ./configure --with-pic
+    ./configure --enable-pic --with-python=`which python2`
     make -j4 REQUIRES_RTTI=1
     sudo make install
 
